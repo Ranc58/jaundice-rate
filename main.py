@@ -59,7 +59,7 @@ async def process_split_by_words(morph, sanitazed_text):
     try:
         async with timeout(5):
             splited_text = await split_by_words(morph, sanitazed_text)
-    except TimeoutError:
+    except asyncio.TimeoutError:
         error = True
     finally:
         end_dime = time.monotonic() - start_time
@@ -99,8 +99,7 @@ async def process_article(session, morph, charged_words, url):
     sanitazed_text, title = sanitize(html, plaintext=True)
     async with process_split_by_words(morph, sanitazed_text) as (splited_text, execution_time, error):
         if error:
-            return {'title': str(title, encoding='UTF-8'), 'status': ProcessingStatus.TIMEOUT.value, 'score': None, 'words_count': None,
-                    'execution_time': execution_time}
+            return {'title': title, 'status': ProcessingStatus.TIMEOUT.value, 'score': None, 'words_count': None}
         score = calculate_jaundice_rate(splited_text, charged_words)
         logging.info(f'Анализ статьи произведен за {execution_time:.2f} сек.')
     return {'title': title, 'status': ProcessingStatus.OK.value, 'score': score, 'words_count': len(splited_text)}

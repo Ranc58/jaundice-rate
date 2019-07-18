@@ -20,6 +20,10 @@ def _clean_word(word):
 async def split_by_words(morph, text):
     """Учитывает знаки пунктуации, регистр и словоформы, выкидывает предлоги."""
     words = []
+    import random # todo del
+    t =random.randint(0, 1)
+    if t:
+        await asyncio.sleep(6)
     for word in text.split():
         cleaned_word = _clean_word(word)
         normalized_word = morph.parse(cleaned_word)[0].normal_form
