@@ -1,5 +1,13 @@
+import asyncio
+import time
+from unittest import mock
+
 import pymorphy2
 import string
+from unittest.mock import MagicMock, Mock, patch
+
+from async_timeout import timeout
+from timeout_decorator import timeout_decorator
 
 
 def _clean_word(word):
@@ -9,7 +17,7 @@ def _clean_word(word):
     return word
 
 
-def split_by_words(morph, text):
+async def split_by_words(morph, text):
     """Учитывает знаки пунктуации, регистр и словоформы, выкидывает предлоги."""
     words = []
     for word in text.split():
@@ -17,6 +25,7 @@ def split_by_words(morph, text):
         normalized_word = morph.parse(cleaned_word)[0].normal_form
         if len(normalized_word) > 2 or normalized_word == 'не':
             words.append(normalized_word)
+        await asyncio.sleep(0)
     return words
 
 
@@ -28,6 +37,19 @@ def test_split_by_words():
     assert split_by_words(morph, 'Во-первых, он хочет, чтобы') == ['во-первых', 'хотеть', 'чтобы']
 
     assert split_by_words(morph, '«Удивительно, но это стало началом!»') == ['удивительно', 'это', 'стать', 'начало']
+
+
+def timeout_mock(*args, **kwargs):
+    time.sleep(4)
+
+
+@patch("text_tools._clean_word", side_effect=timeout_mock)
+def test_timeout_error_split_by_words(mock_clean_word):
+    morph = pymorphy2.MorphAnalyzer()
+    try:
+        split_by_words(morph, 'Во-первых, он хочет, чтобы')
+    except Exception as e:
+        assert type(e) == TimeoutError
 
 
 def calculate_jaundice_rate(article_words, charged_words):
