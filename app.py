@@ -31,6 +31,9 @@ def get_charged_words():
     with open('charged_dicts/positive_words.txt') as f:
         for line in f:
             line_list.append(line.rstrip('\n'))
+    with open('charged_dicts/positive_words.txt') as f:
+        for line in f:
+            line_list.append(line.rstrip('\n'))
     return line_list
 
 
