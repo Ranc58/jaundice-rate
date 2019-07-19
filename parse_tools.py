@@ -1,29 +1,19 @@
+import asyncio
 import contextlib
 import logging
 import time
 from enum import Enum
+from urllib.parse import urlparse
 
-import aiohttp
-import asyncio
-from concurrent.futures import FIRST_COMPLETED
-
-import aionursery
-from aiohttp import InvalidURL, ClientConnectorError, ClientError
 from async_timeout import timeout
+from aiohttp import InvalidURL, ClientConnectorError, ClientError
 
 from adapters import ArticleNotFound
 from adapters.inosmi_ru import sanitize
 from text_tools import split_by_words, calculate_jaundice_rate
 
-
-TEST_ARTICLES = [
-    'https://inosmi.ru/economic/20190629/245384784.html',
-    'https://inosmi.ru/politic/20190710/245447320.html',# todo change!
-    'https://inosmi.ru/politic/20190710/245447244.html',
-    'http://tra',
-    'https://inosmi.ru/politic/20190710/245446326.html',
-    'https://inosmi.ru/politic/20190710/245444854.html',
-    'ffsdfsgf'
+SOURCE_LIST = [
+    'inosmi.ru'
 ]
 
 
@@ -32,23 +22,6 @@ class ProcessingStatus(Enum):
     FETCH_ERROR = 'FETCH_ERROR'
     PARSING_ERROR = 'PARSING_ERROR'
     TIMEOUT = 'TIMEOUT'
-
-
-@contextlib.asynccontextmanager
-async def create_handy_nursery():
-    try:
-        async with aionursery.Nursery() as nursery:
-            yield nursery
-    except aionursery.MultiError as e:
-        if len(e.exceptions) == 1:
-            raise e.exceptions[0]
-        raise
-
-
-async def fetch(session, url):
-    async with session.get(url) as response:
-        response.raise_for_status()
-        return await response.text()
 
 
 @contextlib.asynccontextmanager
@@ -74,20 +47,26 @@ def get_charged_words():
     return line_list
 
 
+async def fetch(session, url):
+    async with session.get(url) as response:
+        response.raise_for_status()
+        return await response.text()
+
+
 async def check_for_available_parse(url):
-    if url == 'http://tra':  # todo del!
-        raise ArticleNotFound
-    return True
+    netloc = urlparse(url).netloc
+    if netloc not in SOURCE_LIST:
+        raise ArticleNotFound(f'Статья на {netloc}')
 
 
 async def process_article(session, morph, charged_words, url):
     try:
         await check_for_available_parse(url)
-    except ArticleNotFound: #todo change title
-        return {'title': 'URL Does not exist',  'status': ProcessingStatus.PARSING_ERROR.value, 'score': None, 'words_count': None}
+    except ArticleNotFound as exc:
+        return {'title': f'{exc}',  'status': ProcessingStatus.PARSING_ERROR.value, 'score': None, 'words_count': None}
     try:
-        # async with timeout(5): # todo back
-        html = await fetch(session, url)
+        async with timeout(5):
+            html = await fetch(session, url)
     except (
         InvalidURL,
         ClientConnectorError,
@@ -103,4 +82,3 @@ async def process_article(session, morph, charged_words, url):
         score = calculate_jaundice_rate(splited_text, charged_words)
         logging.info(f'Анализ статьи произведен за {execution_time:.2f} сек.')
     return {'title': title, 'status': ProcessingStatus.OK.value, 'score': score, 'words_count': len(splited_text)}
-

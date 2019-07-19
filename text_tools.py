@@ -20,10 +20,6 @@ def _clean_word(word):
 async def split_by_words(morph, text):
     """Учитывает знаки пунктуации, регистр и словоформы, выкидывает предлоги."""
     words = []
-    import random # todo del
-    t =random.randint(0, 1)
-    if t:
-        await asyncio.sleep(6)
     for word in text.split():
         cleaned_word = _clean_word(word)
         normalized_word = morph.parse(cleaned_word)[0].normal_form
@@ -38,22 +34,23 @@ def test_split_by_words():
     # Старайтесь ораганизовать свой код так, чтоб создавать экземпляр MorphAnalyzer заранее и в единственном числе
     morph = pymorphy2.MorphAnalyzer()
 
+    
     assert split_by_words(morph, 'Во-первых, он хочет, чтобы') == ['во-первых', 'хотеть', 'чтобы']
 
     assert split_by_words(morph, '«Удивительно, но это стало началом!»') == ['удивительно', 'это', 'стать', 'начало']
 
 
-def timeout_mock(*args, **kwargs):
-    time.sleep(4)
-
-
-@patch("text_tools._clean_word", side_effect=timeout_mock)
-def test_timeout_error_split_by_words(mock_clean_word):
-    morph = pymorphy2.MorphAnalyzer()
-    try:
-        split_by_words(morph, 'Во-первых, он хочет, чтобы')
-    except Exception as e:
-        assert type(e) == TimeoutError
+# def timeout_mock(*args, **kwargs): # todo del
+#     time.sleep(4)
+#
+#
+# @patch("text_tools._clean_word", side_effect=timeout_mock)
+# def test_timeout_error_split_by_words(mock_clean_word):
+#     morph = pymorphy2.MorphAnalyzer()
+#     try:
+#         split_by_words(morph, 'Во-первых, он хочет, чтобы')
+#     except Exception as e:
+#         assert type(e) == TimeoutError
 
 
 def calculate_jaundice_rate(article_words, charged_words):
