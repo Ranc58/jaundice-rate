@@ -1,10 +1,12 @@
 .git
 .idea
+.env
 .pytest_cache
 .dockerignore
 Dockerfile
 docker-compose.yml
 __pycache__/
+redis/
 myenv/
 venv/
 README.md

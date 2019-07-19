@@ -3,9 +3,21 @@ version: '3'
 services:
 
   app:
-    restart: always
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - env/.env_file
     ports:
       - "8080:8080"
+
+  redis:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./redis/Dockerfile
+    env_file:
+      - env/.env_file
+    ports:
+      - "127.0.0.1:6379:6379"

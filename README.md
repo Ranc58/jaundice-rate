@@ -17,6 +17,8 @@
 pip install -r requirements.txt
 ```
 
+Так же понадбится redis. Можно использовать redis из docker-compose файла в данном репо. Для него необходимо указать параметры `port`, `host`, `password`. 
+Для этого `cp env/.env env/.env_file` и пропишите в `env/.env_file` параметры. 
 # Как запустить
 Для запуска в Docker:
 ```

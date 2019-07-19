@@ -2,15 +2,18 @@ import asyncio
 import contextlib
 import functools
 import logging
+import os
 import time
 import json
 
-
-import aiohttp
 import aionursery
 import pymorphy2
+import aiohttp
 from aiohttp import web
+from aiocache import cached
+from aiocache.serializers import JsonSerializer
 from aiohttp.web_response import json_response
+from aiocache.backends.redis import RedisCache
 
 from parse_tools import process_article
 
@@ -37,6 +40,12 @@ def get_charged_words():
     return line_list
 
 
+@cached(
+    ttl=10, cache=RedisCache, serializer=JsonSerializer(),
+    endpoint=os.environ.get('REDIS_HOST', 'localhost'),
+    port=os.environ.get('REDIS_PORT', 6379),
+    password=os.environ.get('REDIS_PASSWORD', 'SetPass')
+)
 async def process_parse(urls_list, morph, charged_words):
     results_list = []
     start_time = time.monotonic()
@@ -50,7 +59,7 @@ async def process_parse(urls_list, morph, charged_words):
             results_list.append(result_data)
         done, _ = await asyncio.wait(results_list)
         logging.info(f'Общее время анализа всех статей {time.monotonic() - start_time}')
-        return done
+        return [task.result() for task in done]
 
 
 async def articles_handler(request, morph, charged_words):
@@ -61,7 +70,8 @@ async def articles_handler(request, morph, charged_words):
     if len(urls_list) > 10:
         return json_response(data={'error': 'max urls count = 10'}, status=400)
     parse_result = await process_parse(urls_list, morph, charged_words)
-    result_data = json.dumps([task.result() for task in parse_result], ensure_ascii=False)
+    # json.dumps because  json_response body don't support ensure ascii
+    result_data = json.dumps(parse_result, ensure_ascii=False)
     return json_response(text=result_data, status=200)
 
 

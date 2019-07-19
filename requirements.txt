@@ -11,3 +11,5 @@ asynctest==0.13.0
 pymorphy2==0.8
 pymorphy2-dicts==2.*
 DAWG-Python==0.7.*
+aiocache==0.10.1
+aioredis==1.2.0
