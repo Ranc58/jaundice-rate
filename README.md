@@ -18,7 +18,11 @@ pip install -r requirements.txt
 ```
 
 # Как запустить
-
+Для запуска в Docker:
+```
+docker-compose up --build
+```
+Для запуска без Docker:
 ```python3
 python app.py
 ```
