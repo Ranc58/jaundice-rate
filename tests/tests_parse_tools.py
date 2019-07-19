@@ -4,7 +4,6 @@ import asynctest
 import pymorphy2
 import pytest
 from aiohttp import InvalidURL, ClientError
-from aiohttp.test_utils import AioHTTPTestCase
 
 from adapters import ArticleNotFound
 from parse_tools import check_for_available_parse, get_charged_words, SOURCE_LIST, process_article, ProcessingStatus
@@ -27,11 +26,9 @@ async def mock_fetch_errors(*args, **kwargs):
 
 @pytest.mark.asyncio
 async def test_check_for_available_parse():
-    try:
+    with pytest.raises(ArticleNotFound) as excinfo:
         await check_for_available_parse('http://nonexistentUrl.com/test')
-    except Exception as e:
-        assert type(e) == ArticleNotFound
-        assert str(e) == 'Статья на nonexistentUrl.com'
+        assert str(excinfo) == 'Статья на nonexistentUrl.com'
 
 
 @pytest.mark.asyncio
@@ -97,9 +94,7 @@ async def test_invalid_url_error():
         'score': None,
         'words_count': None
     }
-
-    with asynctest.patch(
-        'parse_tools.fetch', side_effect=mock_fetch_errors):
+    with asynctest.patch('parse_tools.fetch', side_effect=mock_fetch_errors):
         result = await process_article(session_mock, morph, charged_words, url)
         assert result == expected_result
 
@@ -116,7 +111,6 @@ async def test_client_error():
         'score': None,
         'words_count': None
     }
-
     with asynctest.patch('parse_tools.fetch', side_effect=mock_fetch_errors):
         result = await process_article(session_mock, morph, charged_words, url)
         assert result == expected_result
