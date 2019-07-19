@@ -47,7 +47,7 @@ def get_charged_words():
     return line_list
 
 
-async def fetch(session, url):
+async def fetch(url, session):
     async with session.get(url) as response:
         response.raise_for_status()
         return await response.text()
@@ -60,25 +60,61 @@ async def check_for_available_parse(url):
 
 
 async def process_article(session, morph, charged_words, url):
+    result = {
+        'title': None,
+        'status': None,
+        'score': None,
+        'words_count': None
+    }
+
     try:
         await check_for_available_parse(url)
     except ArticleNotFound as exc:
-        return {'title': f'{exc}',  'status': ProcessingStatus.PARSING_ERROR.value, 'score': None, 'words_count': None}
+        result.update({
+            'title': f'{exc}',
+            'status': ProcessingStatus.PARSING_ERROR.value
+        })
+        return result
+
     try:
         async with timeout(5):
-            html = await fetch(session, url)
+            html = await fetch(url, session)
+    except InvalidURL as e:
+        result.update({
+            'title': f'URL {e} Does not exist',
+            'status': ProcessingStatus.FETCH_ERROR.value
+        })
+        return result
     except (
-        InvalidURL,
-        ClientConnectorError,
-        ClientError
+        ClientError,
+        ClientConnectorError
     ):
-        return {'title': 'URL Does not exist', 'status': ProcessingStatus.FETCH_ERROR.value,  'score': None, 'words_count': None}
+        result.update({
+            'title': 'Connection error',
+            'status': ProcessingStatus.FETCH_ERROR.value
+        })
+        return result
     except asyncio.TimeoutError:
-        return {'title': 'TimeOut error', 'status': ProcessingStatus.TIMEOUT.value, 'score': None, 'words_count': None}
+        result.update({
+            'title': 'TimeOut error',
+            'status': ProcessingStatus.TIMEOUT.value
+        })
+        return result
+
     sanitazed_text, title = sanitize(html, plaintext=True)
     async with process_split_by_words(morph, sanitazed_text) as (splited_text, execution_time, error):
         if error:
-            return {'title': title, 'status': ProcessingStatus.TIMEOUT.value, 'score': None, 'words_count': None}
+            result.update({
+                'title': title,
+                'status': ProcessingStatus.TIMEOUT.value
+            })
+            return result
         score = calculate_jaundice_rate(splited_text, charged_words)
         logging.info(f'Анализ статьи произведен за {execution_time:.2f} сек.')
-    return {'title': title, 'status': ProcessingStatus.OK.value, 'score': score, 'words_count': len(splited_text)}
+        result.update({
+            'title': title,
+            'status': ProcessingStatus.OK.value,
+            'score': score,
+            'words_count': len(splited_text)
+        })
+    return result
